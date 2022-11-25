@@ -4,12 +4,8 @@
  * @author	owenm    <owen23355@gmail.com>
  * @license MIT
  */
-(function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-  typeof define === 'function' && define.amd ? define(factory) :
-  (global = global || self, global.Sortable = factory());
-}(this, (function () { 'use strict';
 
+export const Sortable = (function () { 'use strict';
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
 
@@ -3791,4 +3787,4 @@
 
   return Sortable;
 
-})));
+})();

@@ -3,7 +3,7 @@ use wasm_bindgen::JsValue;
 mod js {
     use wasm_bindgen::prelude::*;
 
-    #[wasm_bindgen(module = "/Sortable.min.js")]
+    #[wasm_bindgen(module = "/Sortable.js")]
     extern "C" {
         pub type Sortable;
 
