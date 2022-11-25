@@ -5,9 +5,10 @@ mod js {
 
     #[wasm_bindgen(module = "/Sortable.min.js")]
     extern "C" {
+        #[wasm_bindgen(js_name = default)]
         pub type Sortable;
 
-        #[wasm_bindgen(constructor)]
+        #[wasm_bindgen(constructor, js_class = default)]
         pub fn new(elt: &web_sys::Element, opts: &js_sys::Map) -> Sortable;
     }
 }
