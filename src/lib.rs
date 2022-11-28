@@ -181,7 +181,7 @@ impl Options {
     callback!(on_clone, "onClone", Clone);
     callback!(on_change, "onChange", Change);
 
-    // TODO: all the callbacks
+    // TODO: onMove
 
     /// Recover the javascript options that are being built in this object.
     ///
