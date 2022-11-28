@@ -2,6 +2,7 @@
 name = "sortable-js"
 version = "0.1.0+js.1.15.0"
 edition = "2021"
+exclude = ["shell.nix", "nix/*"]
 
 [dependencies]
 js-sys = "0.3.60"
