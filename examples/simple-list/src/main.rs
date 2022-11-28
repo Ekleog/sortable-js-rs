@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 fn main() {
     web_sys::console::log_1(&JsValue::from_str("Wasm init complete"));
     sortable_js::Options::new()
-        .set_group("test")
+        .animation_ms(150.)
         .apply(
             &web_sys::window()
                 .expect("had no window")

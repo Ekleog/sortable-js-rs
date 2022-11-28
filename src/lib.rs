@@ -34,11 +34,42 @@ impl Options {
         Options(js_sys::Object::new())
     }
 
-    option!(set_group, "group", &str, from_str);
-    option!(set_sort, "sort", bool, from_bool);
-    option!(set_delay, "delay", f64, from_f64);
-    option!(set_disabled, "disabled", bool, from_bool);
-    option!(set_handle, "handle", &str, from_str);
+    option!(group, "group", &str, from_str);
+    option!(sort, "sort", bool, from_bool);
+    option!(delay, "delay", f64, from_f64);
+    option!(delay_on_touch_only, "delayOnTouchOnly", bool, from_bool);
+    option!(touch_start_threshold, "touchStartThreshold", f64, from_f64);
+    option!(disabled, "disabled", bool, from_bool);
+    // TODO: consider supporting the Store option
+    option!(animation_ms, "animation", f64, from_f64);
+    option!(easing, "easing", &str, from_str);
+    option!(handle, "handle", &str, from_str);
+    option!(filter, "filter", &str, from_str);
+    option!(prevent_on_filter, "preventOnFilter", bool, from_bool);
+    option!(draggable, "draggable", &str, from_str);
+
+    option!(data_id_attr, "dataIdAttr", &str, from_str);
+
+    option!(ghost_class, "ghostClass", &str, from_str);
+    option!(chosen_class, "chosenClass", &str, from_str);
+    option!(drag_class, "dragClass", &str, from_str);
+
+    option!(swap_threshold, "swapThreshold", f64, from_f64);
+    option!(invert_swap, "invertSwap", bool, from_bool);
+    option!(inverted_swap_threshold, "invertedSwapThreshold", f64, from_f64);
+    option!(direction, "direction", &str, from_str);
+
+    option!(force_fallback, "forceFallback", bool, from_bool);
+
+    option!(fallback_class, "fallbackClass", &str, from_str);
+    option!(fallback_on_body, "fallbackOnBody", bool, from_bool);
+    option!(fallback_tolerance, "fallbackTolerance", f64, from_f64);
+
+    option!(dragover_bubble, "dragoverBubble", bool, from_bool);
+    option!(remove_clone_on_hide, "removeCloneOnHide", bool, from_bool);
+    option!(empty_insert_threshold, "emptyInsertThreshold", f64, from_f64);
+
+    // TODO: all the callbacks
 
     pub fn apply(&self, elt: &web_sys::Element) {
         js::Sortable::new(elt, &self.0);
