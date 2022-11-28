@@ -1,4 +1,7 @@
-use wasm_bindgen::JsValue;
+use std::rc::Rc;
+
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::{JsCast, JsValue};
 
 mod js {
     use wasm_bindgen::prelude::*;
@@ -12,26 +15,113 @@ mod js {
     }
 }
 
-/// See https://github.com/SortableJS/Sortable for more documentation about available options
-pub struct Options(js_sys::Object);
+#[derive(Clone, Debug)]
+pub struct Event {
+    pub raw_event: js_sys::Object,
+    pub to: web_sys::HtmlElement,
+    pub from: web_sys::HtmlElement,
+    pub item: web_sys::HtmlElement,
+    pub clone: web_sys::HtmlElement,
+    pub old_index: Option<usize>,
+    pub new_index: Option<usize>,
+    pub old_draggable_index: Option<usize>,
+    pub new_draggable_index: Option<usize>,
+    // TODO: pullMode
+}
 
-macro_rules! option {
-    ( $setter:ident, $jsname:expr, $typ:ty, $builder:ident ) => {
-        pub fn $setter(&self, value: $typ) -> &Options {
-            let res = js_sys::Reflect::set(
-                &self.0,
-                &JsValue::from_str($jsname),
-                &JsValue::$builder(value)
-            ).expect("setting property on object failed");
-            assert!(res, "failed setting property on object");
-            self
+impl Event {
+    fn from_raw_event(raw_event: js_sys::Object) -> Event {
+        macro_rules! get {
+            ($field:expr) => {
+                js_sys::Reflect::get(&raw_event, &JsValue::from_str($field))
+                    .expect("failed retrieving field from raw event")
+                    .dyn_into()
+                    .expect("failed casting field of raw event to proper type")
+            };
+        }
+        macro_rules! get_optint {
+            ($field:expr) => {
+                js_sys::Reflect::get(&raw_event, &JsValue::from_str($field))
+                    .ok()
+                    .map(|evt| {
+                        let float = evt.as_f64()
+                            .expect("failed casting field of raw event to proper type");
+                        let int = float as usize;
+                        assert!((int as f64 - float).abs() < 0.1, "received index that is not an integer: {}", float);
+                        int
+                    })
+            };
+        }
+        Event {
+            to: get!("to"),
+            from: get!("from"),
+            item: get!("item"),
+            clone: get!("clone"),
+            old_index: get_optint!("oldIndex"),
+            new_index: get_optint!("newIndex"),
+            old_draggable_index: get_optint!("oldDraggableIndex"),
+            new_draggable_index: get_optint!("newDraggableIndex"),
+            raw_event,
         }
     }
 }
 
+#[repr(usize)]
+enum CallbackId {
+    Choose,
+    Unchoose,
+    Start,
+    End,
+    Add,
+    Update,
+    Sort,
+    Remove,
+    Filter,
+    Clone,
+    Change,
+    _Total,
+}
+
+/// See https://github.com/SortableJS/Sortable for more documentation about available options
+pub struct Options {
+    options: js_sys::Object,
+    callbacks: [Option<Rc<Closure<dyn FnMut(js_sys::Object)>>>; CallbackId::_Total as usize],
+}
+
+macro_rules! option {
+    ( $setter:ident, $jsname:expr, $typ:ty, $builder:ident ) => {
+        pub fn $setter(&mut self, value: $typ) -> &mut Options {
+            let res = js_sys::Reflect::set(
+                &self.options,
+                &JsValue::from_str($jsname),
+                &JsValue::$builder(value),
+            )
+            .expect("setting property on object failed");
+            assert!(res, "failed setting property on object");
+            self
+        }
+    };
+}
+
+macro_rules! callback {
+    ( $setter:ident, $jsname:expr, $id:ident ) => {
+        pub fn $setter(&mut self, mut cb: impl 'static + FnMut(Event)) -> &Options {
+            let cb = Closure::new(move |e: js_sys::Object| cb(Event::from_raw_event(e)));
+            let res = js_sys::Reflect::set(&self.options, &JsValue::from_str($jsname), cb.as_ref())
+                .expect("setting callback on object failed");
+            assert!(res, "failed setting callback on object");
+            self.callbacks[CallbackId::$id as usize] = Some(Rc::new(cb));
+            self
+        }
+    };
+}
+
 impl Options {
     pub fn new() -> Options {
-        Options(js_sys::Object::new())
+        Options {
+            options: js_sys::Object::new(),
+            callbacks: std::array::from_fn(|_| None),
+        }
     }
 
     option!(group, "group", &str, from_str);
@@ -56,7 +146,12 @@ impl Options {
 
     option!(swap_threshold, "swapThreshold", f64, from_f64);
     option!(invert_swap, "invertSwap", bool, from_bool);
-    option!(inverted_swap_threshold, "invertedSwapThreshold", f64, from_f64);
+    option!(
+        inverted_swap_threshold,
+        "invertedSwapThreshold",
+        f64,
+        from_f64
+    );
     option!(direction, "direction", &str, from_str);
 
     option!(force_fallback, "forceFallback", bool, from_bool);
@@ -67,7 +162,24 @@ impl Options {
 
     option!(dragover_bubble, "dragoverBubble", bool, from_bool);
     option!(remove_clone_on_hide, "removeCloneOnHide", bool, from_bool);
-    option!(empty_insert_threshold, "emptyInsertThreshold", f64, from_f64);
+    option!(
+        empty_insert_threshold,
+        "emptyInsertThreshold",
+        f64,
+        from_f64
+    );
+
+    callback!(on_choose, "onChoose", Choose);
+    callback!(on_unchoose, "onUnchoose", Unchoose);
+    callback!(on_start, "onStart", Start);
+    callback!(on_end, "onEnd", End);
+    callback!(on_add, "onAdd", Add);
+    callback!(on_update, "onUpdate", Update);
+    callback!(on_sort, "onSort", Sort);
+    callback!(on_remove, "onRemove", Remove);
+    callback!(on_filter, "onFilter", Filter);
+    callback!(on_clone, "onClone", Clone);
+    callback!(on_change, "onChange", Change);
 
     // TODO: all the callbacks
 
@@ -76,10 +188,21 @@ impl Options {
     /// Note that you can set options on this object through `js_sys::Reflect`.
     /// This allows setting options that are not planned for by `sortable-js-rs`.
     pub fn options(&self) -> &js_sys::Object {
-        &self.0
+        &self.options
     }
 
-    pub fn apply(&self, elt: &web_sys::Element) {
-        js::Sortable::new(elt, &self.0);
+    pub fn apply(&self, elt: &web_sys::Element) -> Sortable {
+        js::Sortable::new(elt, &self.options);
+        Sortable {
+            _callbacks: self.callbacks.clone(),
+        }
     }
+}
+
+/// Data related to the Sortable instance
+///
+/// It must be kept alive on the rust sideas long as the instance can call callbacks, as otherwise the link between the js-side callback and the rust-side callback would be lost.
+pub struct Sortable {
+    /// Keep the callbacks alive
+    _callbacks: [Option<Rc<Closure<dyn FnMut(js_sys::Object)>>>; CallbackId::_Total as usize],
 }
