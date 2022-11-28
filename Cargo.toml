@@ -1,6 +1,11 @@
 [package]
 name = "sortable-js"
 version = "0.1.0+js.1.15.0"
+license = "MIT"
+categories = ["api-bindings", "gui", "wasm", "web-programming"]
+keywords = ["webui"]
+description = "Rusty bindings to SortableJS, to build sortable lists in wasm"
+repository = "https://github.com/Ekleog/sortable-js-rs"
 edition = "2021"
 exclude = ["shell.nix", "nix/*"]
 
