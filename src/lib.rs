@@ -71,6 +71,14 @@ impl Options {
 
     // TODO: all the callbacks
 
+    /// Recover the javascript options that are being built in this object.
+    ///
+    /// Note that you can set options on this object through `js_sys::Reflect`.
+    /// This allows setting options that are not planned for by `sortable-js-rs`.
+    pub fn options(&self) -> &js_sys::Object {
+        &self.0
+    }
+
     pub fn apply(&self, elt: &web_sys::Element) {
         js::Sortable::new(elt, &self.0);
     }
