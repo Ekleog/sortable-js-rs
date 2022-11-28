@@ -1,3 +1,12 @@
+//! This crate provides rusty bindings to SortableJS.
+//!
+//! The documentation mostly lives with [the official SortableJS documentation](https://github.com/SortableJS/Sortable).
+//!
+//! Just adding this crate as a dependency should be enough to get everything working when using [trunk](https://trunkrs.dev/). Just be careful to keep alive the return value of `Sortable::apply`, or you will get JavaScript exceptions.
+//!
+//! You can find example usage of SortableJS from a pure-Rust WASM application
+//! in the `examples/` directory.
+
 use std::rc::Rc;
 
 use wasm_bindgen::closure::Closure;
@@ -15,6 +24,10 @@ mod js {
     }
 }
 
+/// An event raised by one of the Sortable callbacks. See [the official documentation](https://github.com/SortableJS/Sortable#event-object-demo) for details about the fields.
+///
+/// `raw_event` contains the raw JS event, should additional non-documented
+/// fields be needed.
 #[derive(Clone, Debug)]
 pub struct Event {
     pub raw_event: js_sys::Object,
@@ -44,10 +57,15 @@ impl Event {
                 js_sys::Reflect::get(&raw_event, &JsValue::from_str($field))
                     .ok()
                     .map(|evt| {
-                        let float = evt.as_f64()
+                        let float = evt
+                            .as_f64()
                             .expect("failed casting field of raw event to proper type");
                         let int = float as usize;
-                        assert!((int as f64 - float).abs() < 0.1, "received index that is not an integer: {}", float);
+                        assert!(
+                            (int as f64 - float).abs() < 0.1,
+                            "received index that is not an integer: {}",
+                            float
+                        );
                         int
                     })
             };
@@ -117,6 +135,10 @@ macro_rules! callback {
 }
 
 impl Options {
+    /// Create a builder for `Sortable`
+    ///
+    /// This builder allows for configuration options to be set. Once the
+    /// desired configuration is done, use `apply` to apply it to a list.
     pub fn new() -> Options {
         Options {
             options: js_sys::Object::new(),
@@ -183,14 +205,20 @@ impl Options {
 
     // TODO: onMove
 
-    /// Recover the javascript options that are being built in this object.
+    /// Recover the javascript options that are being built in this object
     ///
     /// Note that you can set options on this object through `js_sys::Reflect`.
-    /// This allows setting options that are not planned for by `sortable-js-rs`.
+    /// This allows setting options that are not planned for by
+    /// `sortable-js-rs`.
     pub fn options(&self) -> &js_sys::Object {
         &self.options
     }
 
+    /// Apply the current configuration as a `Sortable` instance on `elt`
+    ///
+    /// Do not forget to keep the return value of this function alive for as
+    /// long as you want the callbacks to be callable, as JS code will error out
+    /// should an event happen after it was dropped.
     pub fn apply(&self, elt: &web_sys::Element) -> Sortable {
         js::Sortable::new(elt, &self.options);
         Sortable {
@@ -201,7 +229,9 @@ impl Options {
 
 /// Data related to the Sortable instance
 ///
-/// It must be kept alive on the rust sideas long as the instance can call callbacks, as otherwise the link between the js-side callback and the rust-side callback would be lost.
+/// It must be kept alive on the rust sideas long as the instance can call
+/// callbacks, as otherwise the link between the js-side callback and the
+/// rust-side callback would be lost.
 pub struct Sortable {
     /// Keep the callbacks alive
     _callbacks: [Option<Rc<Closure<dyn FnMut(js_sys::Object)>>>; CallbackId::_Total as usize],
