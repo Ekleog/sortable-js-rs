@@ -1,6 +1,6 @@
 [package]
 name = "sortable-js"
-version = "0.1.0+js.1.15.0"
+version = "0.1.1+js.1.15.0"
 license = "MIT"
 categories = ["api-bindings", "gui", "wasm", "web-programming"]
 keywords = ["webui"]
