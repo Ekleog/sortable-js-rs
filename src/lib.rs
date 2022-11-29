@@ -97,6 +97,7 @@ enum CallbackId {
     Filter,
     Clone,
     Change,
+    Spill,
     _Total,
 }
 
@@ -204,6 +205,11 @@ impl Options {
     callback!(on_change, "onChange", Change);
 
     // TODO: onMove
+
+    // RevertOnSpill / RemoveOnSpill plugins
+    option!(revert_on_spill, "revertOnSpill", bool, from_bool);
+    option!(remove_on_spill, "removeOnSpill", bool, from_bool);
+    callback!(on_spill, "onSpill", Spill);
 
     /// Recover the javascript options that are being built in this object
     ///
