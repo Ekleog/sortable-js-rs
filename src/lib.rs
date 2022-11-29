@@ -17,10 +17,14 @@ mod js {
 
     #[wasm_bindgen(module = "/sortable.esm.js")]
     extern "C" {
+        #[wasm_bindgen(extends = js_sys::Object)]
         pub type Sortable;
 
         #[wasm_bindgen(constructor)]
         pub fn new(elt: &web_sys::Element, opts: &js_sys::Object) -> Sortable;
+
+        #[wasm_bindgen(method)]
+        pub fn destroy(item: &Sortable);
     }
 }
 
@@ -226,8 +230,12 @@ impl Options {
     /// long as you want the callbacks to be callable, as JS code will error out
     /// should an event happen after it was dropped.
     pub fn apply(&self, elt: &web_sys::Element) -> Sortable {
-        js::Sortable::new(elt, &self.options);
+        let sortable = js::Sortable::new(elt, &self.options);
+        let object_ref: &js_sys::Object = sortable.as_ref();
+        let raw_object = object_ref.clone();
         Sortable {
+            raw_object,
+            sortable,
             _callbacks: self.callbacks.clone(),
         }
     }
@@ -235,10 +243,23 @@ impl Options {
 
 /// Data related to the Sortable instance
 ///
-/// It must be kept alive on the rust sideas long as the instance can call
-/// callbacks, as otherwise the link between the js-side callback and the
-/// rust-side callback would be lost.
+/// When it is dropped, the list is made non-sortable again. This is required
+/// because callbacks could be called otherwise. If it is a problem for you, you
+/// can leak it, but be aware of the fact that it is a leak.
 pub struct Sortable {
+    /// Raw Sortable JS object, should this crate not expose the necessary
+    /// methods
+    pub raw_object: js_sys::Object,
+
+    /// raw_object but with the proper type
+    sortable: js::Sortable,
+
     /// Keep the callbacks alive
     _callbacks: [Option<Rc<Closure<dyn FnMut(js_sys::Object)>>>; CallbackId::_Total as usize],
+}
+
+impl Drop for Sortable {
+    fn drop(&mut self) {
+        self.sortable.destroy();
+    }
 }
