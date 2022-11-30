@@ -248,6 +248,7 @@ impl Options {
         f64,
         from_f64
     );
+    option!(revert_dom, "revertDOM", bool, from_bool);
 
     callback!(on_choose, "onChoose", Choose);
     callback!(on_unchoose, "onUnchoose", Unchoose);
