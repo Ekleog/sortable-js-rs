@@ -88,6 +88,57 @@ impl Event {
     }
 }
 
+/// An event raised by one of the Sortable callbacks. See [the official documentation](https://github.com/SortableJS/Sortable/#move-event-object) for details about the fields.
+///
+/// `raw_event` contains the raw JS event, should additional non-documented
+/// fields be needed.
+#[derive(Clone, Debug)]
+pub struct MoveEvent {
+    pub raw_event: js_sys::Object,
+    pub to: web_sys::HtmlElement,
+    pub from: web_sys::HtmlElement,
+    pub dragged: web_sys::HtmlElement,
+    // TODO: cast fails? pub dragged_rect: web_sys::DomRect,
+    pub related: web_sys::HtmlElement,
+    // TODO: cast fails? pub related_rect: web_sys::DomRect,
+    pub will_insert_after: bool,
+}
+
+impl MoveEvent {
+    fn from_raw_event(raw_event: js_sys::Object) -> MoveEvent {
+        macro_rules! get {
+            ($field:expr) => {
+                js_sys::Reflect::get(&raw_event, &JsValue::from_str($field))
+                    .expect("failed retrieving field from raw event")
+                    .dyn_into()
+                    .expect("failed casting field of raw event to proper type")
+            };
+        }
+        let will_insert_after =
+            js_sys::Reflect::get(&raw_event, &JsValue::from_str("willInsertAfter"))
+                .expect("failed retrieving field from raw event")
+                .as_bool()
+                .expect("willInsertAfter was not a boolean");
+        MoveEvent {
+            to: get!("to"),
+            from: get!("from"),
+            dragged: get!("dragged"),
+            // dragged_rect: get!("draggedRect"),
+            related: get!("related"),
+            // related_rect: get!("relatedRect"),
+            will_insert_after,
+            raw_event,
+        }
+    }
+}
+
+pub enum MoveResponse {
+    Cancel,
+    InsertBefore,
+    InsertAfter,
+    InsertDefault,
+}
+
 #[repr(usize)]
 enum CallbackId {
     Choose,
@@ -109,6 +160,7 @@ enum CallbackId {
 pub struct Options {
     options: js_sys::Object,
     callbacks: [Option<Rc<Closure<dyn FnMut(js_sys::Object)>>>; CallbackId::_Total as usize],
+    on_move_cb: Option<Rc<Closure<dyn FnMut(js_sys::Object, js_sys::Object) -> JsValue>>>,
 }
 
 macro_rules! option {
@@ -148,6 +200,7 @@ impl Options {
         Options {
             options: js_sys::Object::new(),
             callbacks: std::array::from_fn(|_| None),
+            on_move_cb: None,
         }
     }
 
@@ -208,7 +261,24 @@ impl Options {
     callback!(on_clone, "onClone", Clone);
     callback!(on_change, "onChange", Change);
 
-    // TODO: onMove
+    pub fn on_move(
+        &mut self,
+        mut cb: impl 'static + FnMut(MoveEvent, js_sys::Object) -> MoveResponse,
+    ) -> &Options {
+        let cb = Closure::new(move |evt: js_sys::Object, original_evt: js_sys::Object| {
+            match cb(MoveEvent::from_raw_event(evt), original_evt) {
+                MoveResponse::Cancel => JsValue::FALSE,
+                MoveResponse::InsertBefore => JsValue::from_f64(-1.),
+                MoveResponse::InsertAfter => JsValue::from_f64(1.),
+                MoveResponse::InsertDefault => JsValue::TRUE,
+            }
+        });
+        let res = js_sys::Reflect::set(&self.options, &JsValue::from_str("onMove"), cb.as_ref())
+            .expect("setting callback on object failed");
+        assert!(res, "failed setting callback on object");
+        self.on_move_cb = Some(Rc::new(cb));
+        self
+    }
 
     // RevertOnSpill / RemoveOnSpill plugins
     option!(revert_on_spill, "revertOnSpill", bool, from_bool);
@@ -237,6 +307,7 @@ impl Options {
             raw_object,
             sortable,
             _callbacks: self.callbacks.clone(),
+            _on_move_cb: self.on_move_cb.clone(),
         }
     }
 }
@@ -256,6 +327,7 @@ pub struct Sortable {
 
     /// Keep the callbacks alive
     _callbacks: [Option<Rc<Closure<dyn FnMut(js_sys::Object)>>>; CallbackId::_Total as usize],
+    _on_move_cb: Option<Rc<Closure<dyn FnMut(js_sys::Object, js_sys::Object) -> JsValue>>>,
 }
 
 impl Drop for Sortable {
