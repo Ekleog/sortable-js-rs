@@ -286,6 +286,14 @@ impl Options {
     option!(remove_on_spill, "removeOnSpill", bool, from_bool);
     callback!(on_spill, "onSpill", Spill);
 
+    // AutoScroll plugin
+    option!(scroll, "scroll", bool, from_bool);
+    option!(force_autoscroll_fallback, "forceAutoscrollFallback", bool, from_bool);
+    option!(scroll_sensitivity_px, "scrollSensitivity", f64, from_f64);
+    option!(scroll_speed_px, "scrollSpeed", f64, from_f64);
+    option!(bubble_scroll, "bubbleScroll", bool, from_bool);
+    // TODO: scrollFn
+
     /// Recover the javascript options that are being built in this object
     ///
     /// Note that you can set options on this object through `js_sys::Reflect`.
