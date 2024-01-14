@@ -5,10 +5,10 @@
         "homepage": "",
         "owner": "nix-community",
         "repo": "fenix",
-        "rev": "65fcbcc6dce1feb9c3f6f53bd1ce63c9976791cc",
-        "sha256": "1w071s91whwhb5a15dg1plm4829xmf50g40fp1m0607lhvkw2wcx",
+        "rev": "b1a2ddd9171c567b50d2f2871a5f2f5458876d94",
+        "sha256": "1c5hc7q1jmk1big8rsjnximlqy6qpgch5xb1dfk50d37m9xhxwjn",
         "type": "tarball",
-        "url": "https://github.com/nix-community/fenix/archive/65fcbcc6dce1feb9c3f6f53bd1ce63c9976791cc.tar.gz",
+        "url": "https://github.com/nix-community/fenix/archive/b1a2ddd9171c567b50d2f2871a5f2f5458876d94.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
@@ -17,22 +17,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "cd00072eeb6ca71e6f30831385ce9d613508ad1d",
-        "sha256": "1hmwmp73hba7kd89wfv3nir3xv760w31z4m31vs1mjinwmb6955v",
+        "rev": "d6863cbcbbb80e71cecfc03356db1cda38919523",
+        "sha256": "1al3xvwq751z0c7rfb54zmj2cy7lrhilg4mm9grm4117a61sf2a9",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/cd00072eeb6ca71e6f30831385ce9d613508ad1d.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "npmlock2nix": {
-        "branch": "master",
-        "description": "nixify npm based packages [maintainer=@andir] ",
-        "homepage": "",
-        "owner": "nix-community",
-        "repo": "npmlock2nix",
-        "rev": "eeed152290ec2425f96c5e74e469c40b621e1468",
-        "sha256": "00p9m7hldpm1qbv00bhswg0nda0rhcsh9zniaqa2rg5cgjp3mh8w",
-        "type": "tarball",
-        "url": "https://github.com/nix-community/npmlock2nix/archive/eeed152290ec2425f96c5e74e469c40b621e1468.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/d6863cbcbbb80e71cecfc03356db1cda38919523.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
