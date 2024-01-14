@@ -1,5 +1,5 @@
 /**!
- * Sortable 1.15.0
+ * Sortable 1.15.2
  * @author	RubaXa   <trash@rubaxa.org>
  * @author	owenm    <owen23355@gmail.com>
  * @license MIT
@@ -22,7 +22,7 @@ function _extends() {
   return _extends.apply(this, arguments);
 }
 
-var version = "1.15.0";
+var version = "1.15.2";
 
 function userAgent(pattern) {
   if (typeof window !== 'undefined' && window.navigator) {
@@ -512,6 +512,23 @@ function unsetRect(el) {
   css(el, 'left', '');
   css(el, 'width', '');
   css(el, 'height', '');
+}
+
+function getChildContainingRectFromElement(container, options, ghostEl) {
+  const rect = {};
+  Array.from(container.children).forEach(child => {
+    if (!closest(child, options.draggable, container, false) || child.animated || child === ghostEl) return;
+    const childRect = getRect(child);
+    rect.left = Math.min(rect.left ?? Infinity, childRect.left);
+    rect.top = Math.min(rect.top ?? Infinity, childRect.top);
+    rect.right = Math.max(rect.right ?? -Infinity, childRect.right);
+    rect.bottom = Math.max(rect.bottom ?? -Infinity, childRect.bottom);
+  });
+  rect.width = rect.right - rect.left;
+  rect.height = rect.bottom - rect.top;
+  rect.x = rect.left;
+  rect.y = rect.top;
+  return rect;
 }
 
 const expando = 'Sortable' + new Date().getTime();
@@ -2564,15 +2581,17 @@ function _unsilent() {
 }
 
 function _ghostIsFirst(evt, vertical, sortable) {
-  let rect = getRect(getChild(sortable.el, 0, sortable.options, true));
+  let firstElRect = getRect(getChild(sortable.el, 0, sortable.options, true));
+  const childContainingRect = getChildContainingRectFromElement(sortable.el, sortable.options, ghostEl);
   const spacer = 10;
-  return vertical ? evt.clientX < rect.left - spacer || evt.clientY < rect.top && evt.clientX < rect.right : evt.clientY < rect.top - spacer || evt.clientY < rect.bottom && evt.clientX < rect.left;
+  return vertical ? evt.clientX < childContainingRect.left - spacer || evt.clientY < firstElRect.top && evt.clientX < firstElRect.right : evt.clientY < childContainingRect.top - spacer || evt.clientY < firstElRect.bottom && evt.clientX < firstElRect.left;
 }
 
 function _ghostIsLast(evt, vertical, sortable) {
-  let rect = getRect(lastChild(sortable.el, sortable.options.draggable));
+  const lastElRect = getRect(lastChild(sortable.el, sortable.options.draggable));
+  const childContainingRect = getChildContainingRectFromElement(sortable.el, sortable.options, ghostEl);
   const spacer = 10;
-  return vertical ? evt.clientX > rect.right + spacer || evt.clientX <= rect.right && evt.clientY > rect.bottom && evt.clientX >= rect.left : evt.clientX > rect.right && evt.clientY > rect.top || evt.clientX <= rect.right && evt.clientY > rect.bottom + spacer;
+  return vertical ? evt.clientX > childContainingRect.right + spacer || evt.clientY > lastElRect.bottom && evt.clientX > lastElRect.left : evt.clientY > childContainingRect.bottom + spacer || evt.clientX > lastElRect.right && evt.clientY > lastElRect.top;
 }
 
 function _getSwapDirection(evt, target, targetRect, vertical, swapThreshold, invertedSwapThreshold, invertSwap, isLastTarget) {
@@ -2685,23 +2704,23 @@ if (documentExists) {
 
 
 Sortable.utils = {
-  on: on,
-  off: off,
-  css: css,
-  find: find,
+  on,
+  off,
+  css,
+  find,
   is: function (el, selector) {
     return !!closest(el, selector, el, false);
   },
-  extend: extend,
-  throttle: throttle,
-  closest: closest,
-  toggleClass: toggleClass,
-  clone: clone,
-  index: index,
+  extend,
+  throttle,
+  closest,
+  toggleClass,
+  clone,
+  index,
   nextTick: _nextTick,
   cancelNextTick: _cancelNextTick,
   detectDirection: _detectDirection,
-  getChild: getChild
+  getChild
 };
 /**
  * Get the Sortable instance of an element
@@ -3623,6 +3642,7 @@ function MultiDragPlugin() {
 
               if (update) {
                 dispatchSortableEvent('update');
+                dispatchSortableEvent('sort');
               }
             }
           } // Must be done after capturing individual rects (scroll bar)
