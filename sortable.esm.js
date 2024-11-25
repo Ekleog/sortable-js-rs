@@ -1,5 +1,5 @@
 /**!
- * Sortable 1.15.2
+ * Sortable 1.15.4
  * @author	RubaXa   <trash@rubaxa.org>
  * @author	owenm    <owen23355@gmail.com>
  * @license MIT
@@ -22,7 +22,7 @@ function _extends() {
   return _extends.apply(this, arguments);
 }
 
-var version = "1.15.2";
+var version = "1.15.4";
 
 function userAgent(pattern) {
   if (typeof window !== 'undefined' && window.navigator) {
@@ -1290,7 +1290,7 @@ Sortable.prototype =
         pluginEvent('filter', _this, {
           evt
         });
-        preventOnFilter && evt.cancelable && evt.preventDefault();
+        preventOnFilter && evt.preventDefault();
         return; // cancel dnd
       }
     } else if (filter) {
@@ -1315,7 +1315,7 @@ Sortable.prototype =
       });
 
       if (filter) {
-        preventOnFilter && evt.cancelable && evt.preventDefault();
+        preventOnFilter && evt.preventDefault();
         return; // cancel dnd
       }
     }
@@ -1400,9 +1400,17 @@ Sortable.prototype =
       on(ownerDocument, 'dragover', nearestEmptyInsertDetectEvent);
       on(ownerDocument, 'mousemove', nearestEmptyInsertDetectEvent);
       on(ownerDocument, 'touchmove', nearestEmptyInsertDetectEvent);
-      on(ownerDocument, 'mouseup', _this._onDrop);
-      on(ownerDocument, 'touchend', _this._onDrop);
-      on(ownerDocument, 'touchcancel', _this._onDrop); // Make dragEl draggable (must be before delay for FireFox)
+
+      if (options.supportPointer) {
+        on(ownerDocument, 'pointerup', _this._onDrop); // Native D&D triggers pointercancel
+
+        !this.nativeDraggable && on(ownerDocument, 'pointercancel', _this._onDrop);
+      } else {
+        on(ownerDocument, 'mouseup', _this._onDrop);
+        on(ownerDocument, 'touchend', _this._onDrop);
+        on(ownerDocument, 'touchcancel', _this._onDrop);
+      } // Make dragEl draggable (must be before delay for FireFox)
+
 
       if (FireFox && this.nativeDraggable) {
         this.options.touchStartThreshold = 4;
@@ -1423,9 +1431,15 @@ Sortable.prototype =
         // disable the delayed drag
 
 
-        on(ownerDocument, 'mouseup', _this._disableDelayedDrag);
-        on(ownerDocument, 'touchend', _this._disableDelayedDrag);
-        on(ownerDocument, 'touchcancel', _this._disableDelayedDrag);
+        if (options.supportPointer) {
+          on(ownerDocument, 'pointerup', _this._disableDelayedDrag);
+          on(ownerDocument, 'pointercancel', _this._disableDelayedDrag);
+        } else {
+          on(ownerDocument, 'mouseup', _this._disableDelayedDrag);
+          on(ownerDocument, 'touchend', _this._disableDelayedDrag);
+          on(ownerDocument, 'touchcancel', _this._disableDelayedDrag);
+        }
+
         on(ownerDocument, 'mousemove', _this._delayedDragTouchMoveHandler);
         on(ownerDocument, 'touchmove', _this._delayedDragTouchMoveHandler);
         options.supportPointer && on(ownerDocument, 'pointermove', _this._delayedDragTouchMoveHandler);
@@ -1455,6 +1469,8 @@ Sortable.prototype =
     off(ownerDocument, 'mouseup', this._disableDelayedDrag);
     off(ownerDocument, 'touchend', this._disableDelayedDrag);
     off(ownerDocument, 'touchcancel', this._disableDelayedDrag);
+    off(ownerDocument, 'pointerup', this._disableDelayedDrag);
+    off(ownerDocument, 'pointercancel', this._disableDelayedDrag);
     off(ownerDocument, 'mousemove', this._delayedDragTouchMoveHandler);
     off(ownerDocument, 'touchmove', this._delayedDragTouchMoveHandler);
     off(ownerDocument, 'pointermove', this._delayedDragTouchMoveHandler);
@@ -1480,14 +1496,13 @@ Sortable.prototype =
     }
 
     try {
-      if (document.selection) {
-        // Timeout neccessary for IE9
-        _nextTick(function () {
+      _nextTick(function () {
+        if (document.selection) {
           document.selection.empty();
-        });
-      } else {
-        window.getSelection().removeAllRanges();
-      }
+        } else {
+          window.getSelection().removeAllRanges();
+        }
+      });
     } catch (err) {}
   },
   _dragStarted: function (fallback, evt) {
@@ -1556,7 +1571,7 @@ Sortable.prototype =
           target = parent; // store last element
         }
         /* jshint boss:true */
-        while (parent = parent.parentNode);
+        while (parent = getParentOrHost(parent));
       }
 
       _unhideGhostForTarget();
@@ -2056,6 +2071,7 @@ Sortable.prototype =
     off(ownerDocument, 'mouseup', this._onDrop);
     off(ownerDocument, 'touchend', this._onDrop);
     off(ownerDocument, 'pointerup', this._onDrop);
+    off(ownerDocument, 'pointercancel', this._onDrop);
     off(ownerDocument, 'touchcancel', this._onDrop);
     off(document, 'selectstart', this);
   },
@@ -2720,7 +2736,8 @@ Sortable.utils = {
   nextTick: _nextTick,
   cancelNextTick: _cancelNextTick,
   detectDirection: _detectDirection,
-  getChild
+  getChild,
+  expando
 };
 /**
  * Get the Sortable instance of an element
@@ -3557,8 +3574,17 @@ function MultiDragPlugin() {
                 n = lastIndex + 1;
               }
 
+              const filter = options.filter;
+
               for (; i < n; i++) {
-                if (~multiDragElements.indexOf(children[i])) continue;
+                if (~multiDragElements.indexOf(children[i])) continue; // Check if element is draggable
+
+                if (!closest(children[i], options.draggable, parentEl, false)) continue; // Check if element is filtered
+
+                const filtered = filter && (typeof filter === 'function' ? filter.call(sortable, evt, children[i], sortable) : filter.split(',').some(criteria => {
+                  return closest(children[i], criteria.trim(), parentEl, false);
+                }));
+                if (filtered) continue;
                 toggleClass(children[i], options.selectedClass, true);
                 multiDragElements.push(children[i]);
                 dispatchEvent({
