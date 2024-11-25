@@ -67,7 +67,7 @@ dependencies = [
 
 [[package]]
 name = "sortable-js"
-version = "0.1.6+js.1.15.2.patched.1"
+version = "0.1.7+js.1.15.4.patched.1"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
